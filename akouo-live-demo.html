@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Akouō Health — Live Signal Feed</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#0f1620;
+      --panel2:#0c121a;
+      --text:#e8eef7;
+      --muted:#a7b4c7;
+      --muted2:#7f8aa1;
+      --line:#1e2a3a;
+      --accent:#4cc3ff;
+      --good:#4ade80;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --chip:#0b1220;
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 30% 0%, #101a28 0%, var(--bg) 60%) fixed;
+      color:var(--text);
+      letter-spacing:.2px;
+    }
+    .wrap{
+      max-width: 1120px;
+      margin: 24px auto;
+      padding: 0 16px 32px;
+    }
+    .topbar{
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+      margin-bottom: 14px;
+    }
+    .title{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.3px;
+    }
+    .title .sub{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.3;
+      max-width: 780px;
+    }
+    .badgeRow{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+    }
+    .liveDot{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(15,22,32,.6);
+      box-shadow: var(--shadow);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background: var(--good);
+      box-shadow: 0 0 0 0 rgba(74,222,128,.55);
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(74,222,128,.55)}
+      70%{box-shadow:0 0 0 10px rgba(74,222,128,0)}
+      100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}
+    }
+    .chip{
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(15,22,32,.6);
+      box-shadow: var(--shadow);
+      font-size:12px;
+      color:var(--muted);
+      display:flex; gap:10px; align-items:center;
+    }
+    select, button{
+      background: var(--chip);
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:12px;
+      outline:none;
+    }
+    button{
+      cursor:pointer;
+    }
+    button:hover{border-color:#2b3b52}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+      .badgeRow{justify-content:flex-start}
+    }
+    .panel{
+      background: linear-gradient(180deg, rgba(15,22,32,.9) 0%, rgba(12,18,26,.85) 100%);
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding:14px;
+      box-shadow: var(--shadow);
+    }
+    .panel h2{
+      margin:0 0 10px 0;
+      font-size:13px;
+      font-weight:700;
+      color:var(--text);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .meta{
+      color:var(--muted2);
+      font-size:11px;
+      line-height:1.35;
+    }
+    .tiles{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(0,1fr));
+      gap:10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){
+      .tiles{grid-template-columns: repeat(2, minmax(0,1fr))}
+    }
+    .tile{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:12px 12px 10px;
+      background: rgba(6,10,16,.45);
+    }
+    .tile .k{
+      font-size:11px; color:var(--muted);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .tile .v{
+      margin-top:6px;
+      font-size:22px;
+      font-weight:800;
+      letter-spacing:.2px;
+      display:flex; align-items:baseline; gap:8px;
+    }
+    .unit{font-size:11px;color:var(--muted);font-weight:700}
+    .trend{
+      margin-top:6px;
+      font-size:11px;
+      color:var(--muted2);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:8px;
+    }
+    .spark{
+      width:68px;height:18px;
+      border-radius:8px;
+      background: rgba(76,195,255,.08);
+      border:1px solid rgba(76,195,255,.15);
+      position:relative;
+      overflow:hidden;
+    }
+    .spark::after{
+      content:"";
+      position:absolute; left:-20%; top:0; bottom:0; width:40%;
+      background: linear-gradient(90deg, transparent, rgba(76,195,255,.22), transparent);
+      animation: sweep 2.2s linear infinite;
+    }
+    @keyframes sweep{
+      0%{transform:translateX(0)}
+      100%{transform:translateX(250%)}
+    }
+    .chartWrap{
+      margin-top:10px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(6,10,16,.45);
+      padding:10px;
+    }
+    canvas{display:block;width:100%;height:220px}
+    .legend{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:11px;
+    }
+    .tag{
+      display:inline-flex; gap:8px; align-items:center;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      padding:6px 10px;
+      background: rgba(15,22,32,.6);
+    }
+    .swatch{width:10px;height:10px;border-radius:3px;background:var(--accent)}
+    .swatch2{width:10px;height:10px;border-radius:3px;background:#9ae6ff}
+    .events{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .event{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 10px;
+      background: rgba(6,10,16,.45);
+      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+    }
+    .event .left{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .event .t{
+      font-size:12px; font-weight:700;
+    }
+    .event .s{
+      font-size:11px; color:var(--muted);
+      line-height:1.35;
+    }
+    .smallBtn{
+      padding:7px 10px;
+      border-radius:10px;
+      white-space:nowrap;
+    }
+    .footer{
+      margin-top: 14px;
+      color: var(--muted2);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>Akouō Health — Live Signal Feed (Demo Stream)</h1>
+        <div class="sub">
+  Real-time physiologic signal stream. Display is descriptive and non-diagnostic.
+</div>
+      </div>
+
+      <div class="badgeRow">
+        <div class="liveDot"><span class="dot"></span> LIVE</div>
+        <div class="chip">
+          <span style="color:var(--muted)">Scenario</span>
+          <select id="scenario">
+            <option value="stable">Stable baseline</option>
+            <option value="fatigue">Fatigue / exertion drift</option>
+            <option value="febrile">Febrile / inflammatory drift</option>
+            <option value="recovery">Recovery / normalization</option>
+          </select>
+        </div>
+        <button id="voiceBtn" class="smallBtn">Add Voice Event</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>
+          Live vitals (current values)
+          <span class="meta">Sampling: HR 1 Hz · RR 0.5 Hz · SpO₂ 0.2 Hz · Temp 0.1 Hz · HRV 0.1–0.2 Hz</span>
+        </h2>
+
+        <div class="tiles">
+          <div class="tile">
+            <div class="k">Heart Rate <span class="meta" id="hrQual">stable</span></div>
+            <div class="v"><span id="hr">--</span> <span class="unit">bpm</span></div>
+            <div class="trend"><span id="hrTrend">—</span> <span class="spark"></span></div>
+          </div>
+          <div class="tile">
+            <div class="k">HRV <span class="meta" id="hrvQual">stable</span></div>
+            <div class="v"><span id="hrv">--</span> <span class="unit">ms</span></div>
+            <div class="trend"><span id="hrvTrend">—</span> <span class="spark"></span></div>
+          </div>
+          <div class="tile">
+            <div class="k">Respiratory Rate <span class="meta" id="rrQual">stable</span></div>
+            <div class="v"><span id="rr">--</span> <span class="unit">br/min</span></div>
+            <div class="trend"><span id="rrTrend">—</span> <span class="spark"></span></div>
+          </div>
+          <div class="tile">
+            <div class="k">SpO₂ <span class="meta" id="spo2Qual">stable</span></div>
+            <div class="v"><span id="spo2">--</span> <span class="unit">%</span></div>
+            <div class="trend"><span id="spo2Trend">—</span> <span class="spark"></span></div>
+          </div>
+          <div class="tile">
+            <div class="k">Temperature <span class="meta" id="tempQual">stable</span></div>
+            <div class="v"><span id="temp">--</span> <span class="unit">°C</span></div>
+            <div class="trend"><span id="tempTrend">—</span> <span class="spark"></span></div>
+          </div>
+        </div>
+
+        <div class="chartWrap">
+          <canvas id="chart" width="900" height="220"></canvas>
+          <div class="legend">
+            <span class="tag"><span class="swatch"></span> HR (bpm)</span>
+            <span class="tag"><span class="swatch2"></span> RR (br/min)</span>
+            <span class="tag">Window: last ~120 seconds</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          Tip for demos: switch scenarios mid-sentence (“stable → fatigue drift”) and add a voice event to show multimodal alignment.
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          Voice events (demo log)
+          <span class="meta">Click “Add Voice Event” during scenario drift</span>
+        </h2>
+
+        <div class="events" id="events">
+          <div class="event">
+            <div class="left">
+              <div class="t">Voice capture — example</div>
+              <div class="s">“feeling a bit run down today” · time-aligned context shown in Clinician Dashboard</div>
+              <div class="s meta">This is a demo placeholder entry.</div>
+            </div>
+            <div class="meta" id="nowStamp">—</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          This module does not transcribe audio. It simulates timing + streaming vitals to support a “live” demo experience.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------- Helpers ----------
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const rnd = (a,b) => a + Math.random()*(b-a);
+  const fmtTime = (d) => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+  // ---------- DOM ----------
+  const el = (id) => document.getElementById(id);
+  const hrEl = el('hr'), hrvEl = el('hrv'), rrEl = el('rr'), spo2El = el('spo2'), tempEl = el('temp');
+  const hrTrendEl = el('hrTrend'), rrTrendEl = el('rrTrend'), spo2TrendEl = el('spo2Trend'), tempTrendEl = el('tempTrend'), hrvTrendEl = el('hrvTrend');
+  const nowStamp = el('nowStamp');
+  const scenarioSel = el('scenario');
+  const voiceBtn = el('voiceBtn');
+  const eventsEl = el('events');
+
+  // Qual labels
+  const hrQual = el('hrQual'), rrQual = el('rrQual'), spo2Qual = el('spo2Qual'), tempQual = el('tempQual'), hrvQual = el('hrvQual');
+
+  // ---------- State ----------
+  let scenario = 'stable';
+  scenarioSel.addEventListener('change', e => scenario = e.target.value);
+
+  // Baselines (person-specific)
+  const base = {
+    hr: 82,
+    rr: 15,
+    spo2: 97,
+    temp: 36.8,
+    hrv: 52
+  };
+
+  // Current values
+  let cur = {...base};
+
+  // For trends
+  const history = []; // {t, hr, rr}
+  const maxSeconds = 120;
+  const start = performance.now();
+
+  // For "trend direction" text
+  const prev = {...cur};
+
+  function scenarioTargets(s){
+    // Targets are gentle and descriptive—no "danger" semantics.
+    // Values are not clinical advice; they are demo patterns.
+    switch(s){
+      case 'fatigue':
+        return { hr: base.hr + 18, rr: base.rr + 5, spo2: base.spo2 - 1, temp: base.temp + 0.2, hrv: base.hrv - 10 };
+      case 'febrile':
+        return { hr: base.hr + 22, rr: base.rr + 6, spo2: base.spo2 - 2, temp: base.temp + 1.1, hrv: base.hrv - 12 };
+      case 'recovery':
+        return { hr: base.hr + 6, rr: base.rr + 2, spo2: base.spo2, temp: base.temp + 0.1, hrv: base.hrv - 2 };
+      default:
+        return {...base};
+    }
+  }
+
+  function smoothApproach(value, target, rate){
+    // rate: 0..1 (higher = faster)
+    return value + (target - value) * rate;
+  }
+
+  function trendText(now, before, unit){
+    const d = now - before;
+    const arrow = d > 0.6 ? '↑' : d < -0.6 ? '↓' : '→';
+    const mag = Math.abs(d);
+    const detail = mag < 0.6 ? 'stable' : (mag < 2 ? 'slight change' : 'notable change');
+    return `${arrow} ${detail}`;
+  }
+
+  function qualLabel(now, baseline, tol){
+    const delta = now - baseline;
+    if (Math.abs(delta) <= tol) return 'stable';
+    return delta > tol ? 'above baseline' : 'below baseline';
+  }
+
+  // ---------- Update loops (sampling rates) ----------
+  // HR updates every 1s
+  setInterval(() => {
+    const t = scenarioTargets(scenario);
+    cur.hr = smoothApproach(cur.hr, t.hr + Math.sin((performance.now()-start)/700)*2.2 + rnd(-0.8,0.8), 0.22);
+    cur.hr = clamp(cur.hr, 45, 155);
+    render();
+  }, 1000);
+
+  // RR updates every 2s
+  setInterval(() => {
+    const t = scenarioTargets(scenario);
+    cur.rr = smoothApproach(cur.rr, t.rr + Math.sin((performance.now()-start)/1000)*0.8 + rnd(-0.4,0.4), 0.18);
+    cur.rr = clamp(cur.rr, 8, 34);
+    render();
+  }, 2000);
+
+  // SpO2 updates every 5s
+  setInterval(() => {
+    const t = scenarioTargets(scenario);
+    cur.spo2 = smoothApproach(cur.spo2, t.spo2 + rnd(-0.4,0.2), 0.28);
+    cur.spo2 = clamp(cur.spo2, 90, 100);
+    render();
+  }, 5000);
+
+  // Temp updates every 12s
+  setInterval(() => {
+    const t = scenarioTargets(scenario);
+    cur.temp = smoothApproach(cur.temp, t.temp + rnd(-0.05,0.05), 0.22);
+    cur.temp = clamp(cur.temp, 35.5, 40.5);
+    render();
+  }, 12000);
+
+  // HRV updates every 8s
+  setInterval(() => {
+    const t = scenarioTargets(scenario);
+    cur.hrv = smoothApproach(cur.hrv, t.hrv + rnd(-2,2), 0.25);
+    cur.hrv = clamp(cur.hrv, 18, 120);
+    render();
+  }, 8000);
+
+  // Chart sampling every 1s (for HR/RR trend window)
+  setInterval(() => {
+    const now = new Date();
+    history.push({ t: now, hr: cur.hr, rr: cur.rr });
+    // Keep last ~120 seconds
+    while(history.length > maxSeconds) history.shift();
+    drawChart();
+  }, 1000);
+
+  // ---------- Voice events ----------
+  const voicePhrases = [
+    "feeling more tired than usual",
+    "breathing feels a bit harder",
+    "sleep was poor last night",
+    "headache and chills",
+    "wiped out after stairs",
+    "throat feels sore",
+  ];
+
+  voiceBtn.addEventListener('click', () => {
+    const now = new Date();
+    const phrase = voicePhrases[Math.floor(Math.random()*voicePhrases.length)];
+    const card = document.createElement('div');
+    card.className = 'event';
+    card.innerHTML = `
+      <div class="left">
+        <div class="t">Voice capture — new</div>
+        <div class="s">“${phrase}”</div>
+        <div class="s meta">Time: ${fmtTime(now)} · Scenario: ${scenario.replace(/^\w/,c=>c.toUpperCase())}</div>
+      </div>
+      <div class="meta">${fmtTime(now)}</div>
+    `;
+    eventsEl.insertBefore(card, eventsEl.children[1]);
+  });
+
+  // ---------- Chart drawing ----------
+  const canvas = el('chart');
+  const ctx = canvas.getContext('2d');
+
+  function drawChart(){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    // Background grid
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.strokeStyle = 'rgba(30,42,58,0.8)';
+    ctx.lineWidth = 1;
+
+    // Grid lines
+    const rows = 4, cols = 6;
+    for(let i=1;i<rows;i++){
+      const y = (h/rows)*i;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    }
+    for(let i=1;i<cols;i++){
+      const x = (w/cols)*i;
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+    }
+
+    if(history.length < 2) return;
+
+    // Determine ranges
+    const hrs = history.map(p=>p.hr);
+    const rrs = history.map(p=>p.rr);
+    const hrMin = Math.min(...hrs)-3, hrMax = Math.max(...hrs)+3;
+    const rrMin = Math.min(...rrs)-1.5, rrMax = Math.max(...rrs)+1.5;
+
+    const xFor = (i) => (w * i) / (history.length - 1);
+    const yForHR = (v) => h - ((v - hrMin) / (hrMax - hrMin)) * h;
+    const yForRR = (v) => h - ((v - rrMin) / (rrMax - rrMin)) * h;
+
+    // HR line
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4cc3ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    history.forEach((p,i)=>{
+      const x = xFor(i), y = yForHR(p.hr);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // RR line
+    ctx.strokeStyle = '#9ae6ff';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    history.forEach((p,i)=>{
+      const x = xFor(i), y = yForRR(p.rr);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // Most recent dot markers
+    const last = history[history.length-1];
+    const lx = xFor(history.length-1);
+
+    // HR dot
+    ctx.fillStyle = '#4cc3ff';
+    ctx.beginPath(); ctx.arc(lx, yForHR(last.hr), 3.2, 0, Math.PI*2); ctx.fill();
+
+    // RR dot
+    ctx.fillStyle = '#9ae6ff';
+    ctx.beginPath(); ctx.arc(lx, yForRR(last.rr), 3.0, 0, Math.PI*2); ctx.fill();
+
+    // Small labels
+    ctx.fillStyle = 'rgba(167,180,199,0.9)';
+    ctx.font = '12px ui-sans-serif, system-ui';
+    ctx.fillText('HR', 10, 18);
+    ctx.fillText('RR', 42, 18);
+  }
+
+  // ---------- Render numbers ----------
+  function render(){
+    const now = new Date();
+    nowStamp.textContent = fmtTime(now);
+
+    hrEl.textContent = Math.round(cur.hr);
+    rrEl.textContent = Math.round(cur.rr);
+    spo2El.textContent = Math.round(cur.spo2);
+    tempEl.textContent = cur.temp.toFixed(1);
+    hrvEl.textContent = Math.round(cur.hrv);
+
+    // trend text
+    hrTrendEl.textContent = trendText(cur.hr, prev.hr, 'bpm');
+    rrTrendEl.textContent = trendText(cur.rr, prev.rr, 'br/min');
+    spo2TrendEl.textContent = trendText(cur.spo2, prev.spo2, '%');
+    tempTrendEl.textContent = trendText(cur.temp, prev.temp, '°C');
+    hrvTrendEl.textContent = trendText(cur.hrv, prev.hrv, 'ms');
+
+    // qualitative descriptors
+    hrQual.textContent = qualLabel(cur.hr, base.hr, 2.5);
+    rrQual.textContent = qualLabel(cur.rr, base.rr, 1.5);
+    spo2Qual.textContent = qualLabel(cur.spo2, base.spo2, 0.8);
+    tempQual.textContent = qualLabel(cur.temp, base.temp, 0.25);
+    hrvQual.textContent = qualLabel(cur.hrv, base.hrv, 4);
+
+    // store prev for next render
+    prev.hr = cur.hr; prev.rr = cur.rr; prev.spo2 = cur.spo2; prev.temp = cur.temp; prev.hrv = cur.hrv;
+  }
+
+  // Initial seed chart values
+  for(let i=0;i<20;i++){
+    const d = new Date(Date.now() - (20-i)*1000);
+    history.push({ t:d, hr: base.hr + rnd(-2,2), rr: base.rr + rnd(-1,1) });
+  }
+  drawChart();
+  render();
+})();
+</script>
+</body>
+</html>
